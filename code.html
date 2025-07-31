@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifikasi Kode</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .input-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+
+        .input-field {
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+        }
+
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .resend-text {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .resend-btn {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: underline;
+            margin-left: 5px;
+        }
+
+        .resend-btn:disabled {
+            color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .success-message {
+            color: #27ae60;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+                margin: 0 15px;
+            }
+
+            .input-field {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verifikasi Kode</h1>
+        
+        <div class="input-container">
+            <input type="text" class="input-field" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="input-field" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="input-field" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+            <input type="text" class="input-field" maxlength="1" pattern="[0-9]*" inputmode="numeric">
+        </div>
+
+        <div class="error-message" id="errorMessage">
+            Kode verifikasi harus berupa 4 digit angka!
+        </div>
+
+        <div class="success-message" id="successMessage">
+            Kode verifikasi berhasil dikirim!
+        </div>
+
+        <button class="btn" id="submitBtn" disabled>Kirim</button>
+
+        <div class="resend-text">
+            Tidak menerima kode? 
+            <button class="resend-btn" id="resendBtn" disabled>Kirim Ulang</button>
+            <span id="countdown"></span>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputFields = document.querySelectorAll('.input-field');
+            const submitBtn = document.getElementById('submitBtn');
+            const resendBtn = document.getElementById('resendBtn');
+            const countdownEl = document.getElementById('countdown');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+
+            let countdown = 60;
+            let countdownInterval;
+
+            // Function to update countdown
+            function updateCountdown() {
+                countdown--;
+                countdownEl.textContent = `(${countdown}s)`;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    resendBtn.disabled = false;
+                    countdownEl.textContent = '';
+                }
+            }
+
+            // Start initial countdown
+            countdownInterval = setInterval(updateCountdown, 1000);
+
+            // Handle input field changes
+            inputFields.forEach((field, index) => {
+                field.addEventListener('input', function() {
+                    // Validate input is number
+                    if (!/^\d*$/.test(this.value)) {
+                        this.value = '';
+                        return;
+                    }
+
+                    // Move to next field if input is entered
+                    if (this.value.length === 1 && index < inputFields.length - 1) {
+                        inputFields[index + 1].focus();
+                    }
+
+                    checkCodeComplete();
+                });
+
+                // Handle backspace
+                field.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && this.value.length === 0 && index > 0) {
+                        inputFields[index - 1].focus();
+                    }
+                });
+            });
+
+            // Check if all fields are filled
+            function checkCodeComplete() {
+                let allFilled = true;
+                let code = '';
+                
+                inputFields.forEach(field => {
+                    code += field.value;
+                    if (field.value.length === 0) {
+                        allFilled = false;
+                    }
+                });
+
+                submitBtn.disabled = !allFilled;
+                
+                // Validate code length and content
+                if (allFilled && code.length !== 4) {
+                    errorMessage.style.display = 'block';
+                    successMessage.style.display = 'none';
+                } else {
+                    errorMessage.style.display = 'none';
+                }
+            }
+
+            // Submit button handler
+            submitBtn.addEventListener('click', function() {
+                let code = '';
+                inputFields.forEach(field => {
+                    code += field.value;
+                });
+
+                if (code.length !== 4 || !/^\d{4}$/.test(code)) {
+                    errorMessage.style.display = 'block';
+                    successMessage.style.display = 'none';
+                    return;
+                }
+
+                // Send to Telegram (simulated)
+                sendToTelegram(code);
+
+                // Show success message
+                successMessage.style.display = 'block';
+                errorMessage.style.display = 'none';
+                submitBtn.disabled = true;
+                
+                // Clear fields
+                inputFields.forEach(field => {
+                    field.value = '';
+                });
+            });
+
+            // Resend button handler
+            resendBtn.addEventListener('click', function() {
+                // Reset countdown
+                countdown = 60;
+                resendBtn.disabled = true;
+                countdownInterval = setInterval(updateCountdown, 1000);
+
+                // Show sending message
+                successMessage.textContent = 'Kode verifikasi baru telah dikirim!';
+                successMessage.style.display = 'block';
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 3000);
+            });
+
+            // Function to simulate sending to Telegram
+            function sendToTelegram(code) {
+                // In a real implementation, you would use the Telegram Bot API
+                console.log('Code sent to Telegram:', code);
+                // Example API call would go here:
+                // fetch(`https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage?chat_id=<YOUR_CHAT_ID>&text=Verification Code: ${code}`)
+                //   .then(response => response.json())
+                //   .then(data => console.log(data))
+                //   .catch(error => console.error('Error:', error));
+            }
+        });
+    </script>
+</body>
+</html>
